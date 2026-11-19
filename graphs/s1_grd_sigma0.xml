@@ -1,0 +1,65 @@
+<graph id="Sentinel1GRDToSigma0">
+  <version>1.0</version>
+  <!-- Input is a standard Sentinel-1 GRD .zip or the manifest.safe inside a .SAFE directory. -->
+  <node id="Read">
+    <operator>Read</operator>
+    <sources/>
+    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+      <file>${input}</file>
+    </parameters>
+  </node>
+  <node id="ApplyOrbit">
+    <operator>Apply-Orbit-File</operator>
+    <sources><sourceProduct refid="Read"/></sources>
+    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+      <orbitType>Sentinel Precise (Auto Download)</orbitType>
+      <continueOnFail>false</continueOnFail>
+    </parameters>
+  </node>
+  <node id="BorderNoise">
+    <operator>Remove-GRD-Border-Noise</operator>
+    <sources><sourceProduct refid="ApplyOrbit"/></sources>
+    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+      <selectedPolarisations>VV,VH</selectedPolarisations>
+    </parameters>
+  </node>
+  <node id="ThermalNoise">
+    <operator>ThermalNoiseRemoval</operator>
+    <sources><sourceProduct refid="BorderNoise"/></sources>
+    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+      <selectedPolarisations>VV,VH</selectedPolarisations>
+      <removeThermalNoise>true</removeThermalNoise>
+    </parameters>
+  </node>
+  <node id="Calibration">
+    <operator>Calibration</operator>
+    <sources><sourceProduct refid="ThermalNoise"/></sources>
+    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+      <selectedPolarisations>VV,VH</selectedPolarisations>
+      <outputSigmaBand>true</outputSigmaBand>
+      <outputImageScaleInDb>false</outputImageScaleInDb>
+      <outputGammaBand>false</outputGammaBand>
+      <outputBetaBand>false</outputBetaBand>
+    </parameters>
+  </node>
+  <node id="TerrainCorrection">
+    <operator>Terrain-Correction</operator>
+    <sources><sourceProduct refid="Calibration"/></sources>
+    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+      <sourceBands>Sigma0_VV,Sigma0_VH</sourceBands>
+      <demName>${dem}</demName>
+      <pixelSpacingInMeter>${pixel_spacing}</pixelSpacingInMeter>
+      <mapProjection>AUTO:42001</mapProjection>
+      <imgResamplingMethod>BILINEAR_INTERPOLATION</imgResamplingMethod>
+      <nodataValueAtSea>false</nodataValueAtSea>
+    </parameters>
+  </node>
+  <node id="Write">
+    <operator>Write</operator>
+    <sources><sourceProduct refid="TerrainCorrection"/></sources>
+    <parameters class="com.bc.ceres.binding.dom.XppDomElement">
+      <file>${output}</file>
+      <formatName>GeoTIFF</formatName>
+    </parameters>
+  </node>
+</graph>
